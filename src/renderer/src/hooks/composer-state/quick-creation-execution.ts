@@ -2,6 +2,7 @@ import type { ComposerModel } from './composer-model'
 
 type QuickCreationExecutionInput = Pick<
   ComposerModel,
+  | 'agentPrompt'
   | 'clearNewWorkspaceDraft'
   | 'createMultiple'
   | 'effectivePresetId'
@@ -46,9 +47,12 @@ import { buildQuickComposerStartup } from './quick-startup-plan'
 import { buildQuickCreationRequest } from './quick-creation-request'
 import type { PendingSmartGitHubSubmitResolution } from './source-selection-decisions'
 import { resolveAgentSessionLaunchRoute } from '@/lib/agent-session-launch-plan'
+import { assertBacklogLaunchTarget } from '@/lib/backlog-task-source'
 
+/** Builds the quick-create executor with cancellation checks and Backlog prompt delivery as a draft. */
 export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
   const {
+    agentPrompt,
     clearNewWorkspaceDraft,
     createMultiple,
     effectivePresetId,
@@ -79,6 +83,7 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
     telemetrySource
   } = input
 
+  /** Validates Backlog's source target before preparation, then queues creation without awaiting its completion. */
   const executeQuickCreation = useCallback(
     async (
       smartGitHubResolution: PendingSmartGitHubSubmitResolution,
@@ -88,6 +93,7 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
       repoId: string,
       selectedRepo: Repo
     ): Promise<void> => {
+      assertBacklogLaunchTarget(taskSourceContext, selectedRepo)
       const prepared = await prepareQuickSubmit(
         smartGitHubResolution,
         requestedAgent,
@@ -123,7 +129,9 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
       const promptLinkedWorkItem = agent === null ? null : submitLinkedWorkItem
 
       const { prompt: quickPrompt, draftPrompt: quickDraftPrompt } =
-        resolveQuickCreateLinkedWorkItemPrompt(promptLinkedWorkItem, trimmedNote)
+        taskSourceContext?.provider === 'backlog'
+          ? { prompt: '', draftPrompt: agentPrompt || null }
+          : resolveQuickCreateLinkedWorkItemPrompt(promptLinkedWorkItem, trimmedNote)
 
       const {
         startupPlan,
@@ -263,6 +271,7 @@ export function useQuickCreationExecution(input: QuickCreationExecutionInput) {
       }
     },
     [
+      agentPrompt,
       clearNewWorkspaceDraft,
       createMultiple,
       effectivePresetId,
