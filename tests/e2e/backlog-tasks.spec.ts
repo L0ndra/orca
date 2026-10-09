@@ -5,6 +5,7 @@ import { runProcess } from '../../src/shared/child-process/run-process'
 import { test as base, expect } from './helpers/orca-app'
 
 const test = base.extend({
+  /** Isolates real CLI mutations in an unborn repository and removes it after the scenario. */
   // oxlint-disable-next-line no-empty-pattern -- Playwright requires fixture destructuring.
   testRepoPath: async ({}, provideFixture) => {
     const root = await realpath(await mkdtemp(path.join(tmpdir(), 'orca-backlog-e2e-')))

@@ -25,13 +25,16 @@ const repo = {
 const listRepos = vi.fn(() => [repo])
 // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: scoped server/dispatcher fixtures use only metadata setup, getRuntimeId and listRepos, implemented below.
 const runtime = {
+  /** Keeps unrelated notification persistence out of the admission fixture. */
   configureNotificationDismissalStore: () => {},
+  /** Supplies a stable server identity without starting a real runtime. */
   getRuntimeId: () => 'host',
   listRepos
 } as unknown as OrcaRuntimeService
 
 it('resolves a registered project on the server and refuses forged paths, unknown IDs and invalid mutations', async () => {
   const dispatcher = new RpcDispatcher({ runtime, methods: BACKLOG_METHODS })
+  /** Exercises dispatcher validation separately from the transport-authentication test below. */
   const send = (params: unknown) =>
     dispatcher.dispatch({ id: 'request', authToken: 'test', method: 'backlog.execute', params })
   const operation = {
